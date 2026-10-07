@@ -1,0 +1,18 @@
+{
+  "name": "manga-mgr",
+  "version": "0.1.0",
+  "description": "A minimal self-hosted manga wall: scan local/NAS comic folders (PDF, ZIP/RAR/7z, MOBI, image folders), browse covers, and read in the browser.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/run.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pdfjs-dist": "^4.10.38"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true
+}

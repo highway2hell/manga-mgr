@@ -1,0 +1,10 @@
+# Optional tool drop-ins (a 7-Zip binary for servers without libarchive-tools)
+bin/
+
+node_modules/
+cache/
+data/
+config.json
+.DS_Store
+*.log
+test/tmp/

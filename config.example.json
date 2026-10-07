@@ -1,0 +1,16 @@
+{
+  "port": 4311,
+  "host": "127.0.0.1",
+  "libraryDirs": [
+    { "name": "漫画库", "path": "/Volumes/Public/Media/漫画" }
+  ],
+  "bookExtensions": [".pdf", ".mobi", ".epub", ".azw3", ".fb2", ".djvu"],
+  "archiveExtensions": [".zip", ".rar", ".cbz", ".cbr", ".7z"],
+  "imageExtensions": [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif", ".jfif"],
+  "ignoreExtensions": [".txt", ".db", ".downloading", ".part", ".tmp", ".apk", ".exe", ".nfo", ".url", ".opf", ".xml", ".json"],
+  "excludeNames": [],
+  "coverWidth": 400,
+  "cacheLimitGB": 30,
+  "scanOnStart": true,
+  "jobs": 2
+}

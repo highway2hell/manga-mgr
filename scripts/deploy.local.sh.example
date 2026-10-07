@@ -1,0 +1,15 @@
+# Copy this file to scripts/deploy.local.sh and fill in your own server.
+# scripts/deploy.local.sh is git-ignored, so your host stays out of the repo.
+#
+#   cp scripts/deploy.local.sh.example scripts/deploy.local.sh
+#
+# Both scripts/deploy.sh and scripts/sync-progress.js read these values.
+
+# ssh target of the machine that runs the app (required)
+MANGA_HOST="user@your-server"
+
+# directory on that machine holding the app (default: manga-mgr)
+REMOTE_DIR="manga-mgr"
+
+# systemd --user unit name to restart (default: manga-mgr)
+SERVICE="manga-mgr"

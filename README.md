@@ -63,7 +63,7 @@ npm start
   "port": 4311,
   "host": "127.0.0.1",
   "libraryDirs": [
-    { "name": "漫画库", "path": "/Volumes/Public/Media/漫画" }
+    { "name": "漫画库", "path": "/path/to/your/manga" }
   ],
   "bookExtensions": [".pdf", ".mobi", ".epub", ".azw3", ".fb2", ".djvu"],
   "archiveExtensions": [".zip", ".rar", ".cbz", ".cbr", ".7z"],
@@ -114,22 +114,22 @@ npm start
 滚动模式下鼠标移到页面边缘会出现上下工具条，3 秒无操作自动隐藏。
 体积较大的压缩包/漫画 MOBI 在**首次打开**时会解压到本地缓存（顶部有进度提示），之后翻页是瞬时的。
 
-部署实例（Ubuntu 22.04，读取 `/mnt/nas/Media/漫画`，RAR 由 `bin/7zz` 解、封面由 poppler+Pillow 生成）：
+部署实例（Ubuntu 22.04，书库是 CIFS 挂载的 NAS 目录，RAR 由 `bin/7zz` 解、封面由 poppler+Pillow 生成）：
 
 ![Linux 部署实例](docs/screenshots/remote-linux.jpg)
 
 ## 在多个实例之间同步阅读记录
 
-Mac 上的路径是 `/Volumes/Public/Media/漫画/...`，服务器上是 `/mnt/nas/Media/漫画/...`，
+同一个书库在本地挂到 `/Volumes/YourDisk/manga/...`、在服务器上挂到 `/mnt/nas/Media/manga/...`，
 而记录是按**绝对路径哈希**做 key 的，所以两边的 id 天然不同——直接拷 `progress.json` 是无效的。
 `scripts/sync-progress.js` 会按「相对书库根的路径」把每条记录重新映射到目标实例的 id，
 再通过目标实例的 HTTP API 写入（顺便校验该卷在目标库里确实存在）：
 
 ```bash
-node scripts/sync-progress.js                 # 本地 -> 服务器
+node scripts/sync-progress.js                 # 本地 -> 服务器（主机取自 deploy.local.sh）
 node scripts/sync-progress.js --dry-run       # 只报告，不写入
 node scripts/sync-progress.js --from-remote   # 反向：服务器 -> 本地
-node scripts/sync-progress.js --host user@other-box
+node scripts/sync-progress.js --host user@other-box   # 或 $MANGA_HOST
 ```
 
 - 语义是**合并**而不是覆盖：目标端更新（`updatedAt` 更大）的记录会跳过，收藏取并集；`--force` 可强制覆盖
@@ -140,7 +140,7 @@ node scripts/sync-progress.js --host user@other-box
 
 ## 部署到 Linux 服务器
 
-已在 Ubuntu 22.04（`jacob-ubuntu-box`）上完整跑通：没有 root、没有外网也能装起来。
+已在一台 Ubuntu 22.04 上完整跑通（无 root、无外网也能装起来）。
 程序对平台能力是自适应的，启动时会打印检测结果（例如 `archive: 7zip / pdf cover: poppler / resize: pillow`）。
 
 | 能力 | macOS | Linux |
@@ -186,11 +186,11 @@ ssh user@server 'chmod +x ~/manga-mgr/bin/7zz && ~/manga-mgr/bin/7zz | head -2'
 
 ### 4. 配置
 
-把 `libraryDirs` 指到服务器上的挂载点（例如 CIFS 挂载的 `/mnt/nas/Media/漫画`），`host` 设为 `0.0.0.0`
+把 `libraryDirs` 指到服务器上的挂载点（例如 CIFS 挂载的 `/mnt/nas/Media/manga`），`host` 设为 `0.0.0.0`
 才能从局域网其它设备访问（注意：程序没有登录鉴权，只建议在家庭内网这样开）：
 
 ```json
-{ "host": "0.0.0.0", "port": 4311, "libraryDirs": [{ "name": "漫画库", "path": "/mnt/nas/Media/漫画" }] }
+{ "host": "0.0.0.0", "port": 4311, "libraryDirs": [{ "name": "漫画库", "path": "/mnt/nas/Media/manga" }] }
 ```
 
 ### 5. 开机自启（systemd 用户服务）
@@ -204,7 +204,7 @@ After=network-online.target
 [Service]
 WorkingDirectory=/home/USER/manga-mgr
 Environment=PATH=/home/USER/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStartPre=/bin/sh -c 'ls "/mnt/nas/Media/漫画" >/dev/null 2>&1 || true'   # 触发 CIFS automount
+ExecStartPre=/bin/sh -c 'ls "/mnt/nas/Media/manga" >/dev/null 2>&1 || true'   # 触发 CIFS automount
 ExecStart=/home/USER/.local/bin/node /home/USER/manga-mgr/server.js
 Restart=on-failure
 [Install]
@@ -218,11 +218,15 @@ systemctl --user status manga-mgr     # 查看状态
 journalctl --user -u manga-mgr -f     # 看日志
 ```
 
-更新代码后，一条命令即可（会保留远端的 `cache/`、`data/` 和 `config.json`）：
+更新代码后，一条命令即可（会保留远端的 `cache/`、`data/` 和 `config.json`）。
+目标主机不写进仓库，放在被 git-ignore 的本地文件里：
 
 ```bash
-./scripts/deploy.sh                    # 默认 jacob@jacob-ubuntu-box
-./scripts/deploy.sh user@other-host    # 换一台机器
+cp scripts/deploy.local.sh.example scripts/deploy.local.sh
+$EDITOR scripts/deploy.local.sh          # 填 MANGA_HOST="you@your-server"
+
+./scripts/deploy.sh                      # 之后直接跑
+./scripts/deploy.sh user@other-host      # 或临时指定另一台
 ```
 
 等价于 `rsync -az --exclude=cache/ --exclude=data/ --exclude=config.json ./ user@host:~/manga-mgr/`

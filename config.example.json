@@ -2,7 +2,7 @@
   "port": 4311,
   "host": "127.0.0.1",
   "libraryDirs": [
-    { "name": "漫画库", "path": "/Volumes/Public/Media/漫画" }
+    { "name": "漫画库", "path": "/path/to/your/manga" }
   ],
   "bookExtensions": [".pdf", ".mobi", ".epub", ".azw3", ".fb2", ".djvu"],
   "archiveExtensions": [".zip", ".rar", ".cbz", ".cbr", ".7z"],

@@ -3,16 +3,20 @@
 /**
  * Sync reading progress + favourites between two manga-mgr instances.
  *
- * Ids are hashes of absolute paths, so the Mac `/Volumes/Public/Media/漫画/...`
- * and the server `/mnt/nas/Media/漫画/...` never share ids even though the files
- * are the same. This tool maps every record through its path relative to the
- * library root, then writes it to the target through the target's HTTP API
- * (which also validates that the volume still exists there).
+ * Ids are hashes of absolute paths, so a local library mounted at
+ * `/Volumes/YourDisk/manga/...` and the same share mounted on a server at
+ * `/mnt/nas/Media/manga/...` never share ids even though the files are the
+ * same. This tool maps every record through its path relative to the library
+ * root, then writes it to the target through the target's HTTP API (which also
+ * validates that the volume still exists there).
  *
  *   node scripts/sync-progress.js                      # local -> remote
  *   node scripts/sync-progress.js --dry-run            # only report
  *   node scripts/sync-progress.js --from-remote        # remote -> local
  *   node scripts/sync-progress.js --host user@other    # another server
+ *
+ * The host can also come from $MANGA_HOST or the git-ignored
+ * scripts/deploy.local.sh (see scripts/deploy.local.sh.example).
  */
 
 const fs = require('fs');
@@ -22,8 +26,36 @@ const util = require('../lib/util');
 
 const ROOT = path.join(__dirname, '..');
 
+/**
+ * The target host is never committed: it comes from `--host`, the MANGA_HOST
+ * environment variable, or the git-ignored scripts/deploy.local.sh.
+ */
+function readLocalEnv() {
+  const file = path.join(__dirname, 'deploy.local.sh');
+  const out = {};
+  let text;
+  try {
+    text = fs.readFileSync(file, 'utf8');
+  } catch {
+    return out;
+  }
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^\s*(?:export\s+)?([A-Z_]+)=(.*)$/.exec(line);
+    if (!m) continue;
+    out[m[1]] = m[2].trim().replace(/^["']|["']$/g, '');
+  }
+  return out;
+}
+
 function parseArgs(argv) {
-  const args = { host: 'jacob@jacob-ubuntu-box', remoteDir: 'manga-mgr', direction: 'to-remote', dryRun: false, force: false };
+  const local = readLocalEnv();
+  const args = {
+    host: process.env.MANGA_HOST || local.MANGA_HOST || '',
+    remoteDir: process.env.REMOTE_DIR || local.REMOTE_DIR || 'manga-mgr',
+    direction: 'to-remote',
+    dryRun: false,
+    force: false,
+  };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--host') args.host = argv[++i];
@@ -34,6 +66,9 @@ function parseArgs(argv) {
     else if (a === '--force') args.force = true;
     else if (a === '--help' || a === '-h') {
       console.log('usage: node scripts/sync-progress.js [--host user@host] [--remote-dir dir] [--from-remote|--to-remote] [--dry-run] [--force]');
+      console.log('');
+      console.log('The host can also come from $MANGA_HOST or scripts/deploy.local.sh:');
+      console.log('  cp scripts/deploy.local.sh.example scripts/deploy.local.sh && $EDITOR scripts/deploy.local.sh');
       process.exit(0);
     } else {
       console.error('unknown option: ' + a);
@@ -170,6 +205,11 @@ function makeTarget(side, args) {
 
 async function main() {
   const args = parseArgs(process.argv);
+  if (!args.host || args.host === 'user@your-server') {
+    console.error('No target host. Pass --host user@host, set $MANGA_HOST,');
+    console.error('or create scripts/deploy.local.sh (see scripts/deploy.local.sh.example).');
+    process.exit(2);
+  }
 
   const localIndex = readJson(path.join(ROOT, 'data', 'index.json'));
   const localProgress = readJson(path.join(ROOT, 'data', 'progress.json'), { items: {}, favorites: {} });

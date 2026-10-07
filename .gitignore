@@ -1,3 +1,6 @@
+# Local deploy target (real host names stay out of the repo)
+scripts/deploy.local.sh
+
 # Optional tool drop-ins (a 7-Zip binary for servers without libarchive-tools)
 bin/
 
